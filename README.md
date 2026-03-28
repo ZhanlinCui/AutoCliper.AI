@@ -1,7 +1,7 @@
 <p align="center">
   <strong>AutoCliper.AI</strong><br>
   <em>One long video in. A dozen ready-to-post short clips out.</em><br>
-  <em>一条长视频进，一打可发布短视频出。</em>
+  <em>自动剪辑长视频到短视频，可以直接发布，标题，字幕全部自动生成</em>
 </p>
 
 <p align="center">
