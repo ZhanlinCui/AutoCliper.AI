@@ -1,111 +1,108 @@
-# YouTube Shorts ZH
+# AutoCliper.AI
 
-将任意 YouTube 长视频（访谈、演讲、播客、教程）自动切割为多条带中文字幕的短视频，适合 TikTok / 抖音 / YouTube Shorts / Instagram Reels。
+把一条长视频，变成一组可发布的高传播短视频。
 
-## ✨ 特性
+AutoCliper.AI 专注于一个目标：  
+将 YouTube 访谈/播客/演讲快速拆解为多条 **中文硬字幕短视频**，直接用于 Shorts、抖音、TikTok、Reels。
 
-- **全自动流水线**：下载 → 字幕提取 → 转录分析 → 片段精选 → 切片 → 翻译 → 烧录
-- **智能选段**：基于内容分析自动挑选高传播力片段，支持用户审核后导出
-- **中文硬字幕**：自动翻译为简体中文并烧录进视频，含 1 秒标题 overlay
-- **自适应数量**：根据视频时长自动调整片段数量（<20min→5-8, 20-60min→8-12, >60min→10-15）
-- **竖版可选**：支持 9:16 竖版裁剪输出
-- **自包含**：内置下载器，不依赖外部路径
+## 为什么它更适合做增长内容
 
-## 📋 前置要求
+- 高效：拉取素材、字幕解析、候选切片、批量导出一条链路完成
+- 可控：先出候选清单给你审核，再导出，不盲切
+- 可扩展：支持并行批量切片，适合 10+ clip 的生产场景
+- 可传播：内置标题与文案规范，天然面向短视频平台分发
 
-- Python 3.9+
-- `yt-dlp`：`pip3 install yt-dlp` 或 `brew install yt-dlp`
-- `ffmpeg`：`brew install ffmpeg`
+## 核心能力
 
-## 🚀 使用方法
+- YouTube 下载（视频 + 字幕，英文优先，中文兜底）
+- 字幕转结构化 JSON，便于语义分析
+- 候选片段筛选规范（强开场、完整收尾、信息密度）
+- 批量导出：并行切视频 + 并行窗口字幕
+- 中文字幕硬烧录 + 首秒标题 overlay
 
-### 作为 OpenClaw Skill
-
-1. 将本仓库放入 `~/.qclaw/skills/youtube-shorts-zh/`
-2. 发送 YouTube 链接给 AI Agent
-3. Agent 自动执行完整流水线
-4. 审核候选片段列表后，选择要导出的 ID
-
-### 手动运行脚本
+## 快速开始
 
 ```bash
-cd youtube-shorts-zh
+# 1) 下载素材
+PYTHONPATH="$PWD" python3 -m corekit.fetch_source "<YOUTUBE_URL>" "studio/<slug>/intake"
 
-# 1. 下载视频 + 字幕
-PYTHONPATH="$PWD" python3 -m scripts.download_youtube "<YouTube_URL>" ./work/source/
+# 2) 字幕结构化
+PYTHONPATH="$PWD" python3 -m corekit.subtitle_to_json \
+  "studio/<slug>/intake/raw.en.srt" \
+  "studio/<slug>/intel/transcript.json"
 
-# 2. 解析字幕
-PYTHONPATH="$PWD" python3 -m scripts.srt_to_json ./work/source/*.en.srt ./work/analysis/transcript.json
+# 3) 按 playbook 生成 selected_clips.json（由 Agent 分析）
 
-# 3. 切片
-PYTHONPATH="$PWD" python3 -m scripts.clip_video ./work/source/*.mp4 <start_sec> <end_sec> ./work/clips/01/clip.mp4
+# 4) 并行批量导出
+PYTHONPATH="$PWD" python3 -m corekit.export_manifest \
+  "studio/<slug>/intake/raw.mp4" \
+  "studio/<slug>/intake/raw.en.srt" \
+  "studio/<slug>/intel/selected_clips.json" \
+  "studio/<slug>/exports" \
+  --workers 6
 
-# 4. 窗口化字幕
-PYTHONPATH="$PWD" python3 -m scripts.window_srt ./work/source/*.en.srt <start_sec> <end_sec> ./work/clips/01/clip.en.srt
-
-# 5. 烧录中文字幕 + 标题
-PYTHONPATH="$PWD" python3 -m scripts.burn_subtitles ./work/clips/01/clip.mp4 ./work/clips/01/clip.zh.srt ./work/clips/01/clip.hardsub.mp4 --title "标题"
+# 5) 单条烧录（可循环/并行）
+PYTHONPATH="$PWD" python3 -m corekit.render_hardsubs \
+  "studio/<slug>/exports/01-<slug>/clip.mp4" \
+  "studio/<slug>/exports/01-<slug>/clip.zh.srt" \
+  "studio/<slug>/exports/01-<slug>/clip.hardsub.mp4" \
+  --title "你的标题"
 ```
 
-## 📁 文件结构
+## 目录结构（品牌化命名）
 
-```
-youtube-shorts-zh/
-├── SKILL.md              # Agent 指令文件
-├── scripts/
-│   ├── download_youtube.py   # yt-dlp 封装（cookies + 字幕 + 视频）
-│   ├── srt_to_json.py        # SRT → JSON 解析器
-│   ├── clip_video.py         # 视频片段切割
-│   ├── window_srt.py         # 字幕时间窗口提取
-│   ├── burn_subtitles.py     # 字幕 + 标题烧录
-│   └── _ffmpeg.py            # ffmpeg 路径解析器
-├── references/
-│   ├── clip-schema.md        # selected_clips.json 的 JSON Schema
-│   └── analysis-prompt.md    # 分析 + 翻译 prompt 参考
+```text
+AutoCliper.AI/
+├── SKILL.md
+├── corekit/
+│   ├── fetch_source.py
+│   ├── subtitle_to_json.py
+│   ├── cut_video.py
+│   ├── window_subtitles.py
+│   ├── render_hardsubs.py
+│   ├── export_manifest.py
+│   └── ffmpeg_locator.py
+├── playbooks/
+│   ├── clip-contract.md
+│   └── content-analysis-playbook.md
 └── LICENSE
 ```
 
-## 🎬 输出结构
+## 输出结构
 
-```
-work/<video-slug>/
-├── source/
-│   ├── original.mp4
-│   └── original.en.srt
-├── analysis/
+```text
+studio/<video-slug>/
+├── intake/
+│   ├── raw.mp4
+│   └── raw.<lang>.srt
+├── intel/
 │   ├── transcript.json
 │   ├── selected_clips.json
-│   ├── candidate-review.txt
-│   └── clip-packaging.txt
-└── clips/
+│   ├── candidate-board.md
+│   ├── packaging-copy.md
+│   └── export-report.json
+└── exports/
     └── 01-<slug>/
         ├── clip.mp4
-        ├── clip.en.srt
+        ├── clip.src.srt
         ├── clip.zh.srt
         ├── clip.hardsub.mp4
         └── metadata.txt
 ```
 
-## 🔧 选段规则
+## 建议的选段标准
 
-**优选：**
-- 20秒 - 3分钟，一个清晰的观点
-- 前 3 秒内有强有力的开场
-- 自包含（不需要额外上下文）
-- 信息密集、观点鲜明、反直觉、有记忆点
+- 20 秒到 3 分钟，一条 clip 一个核心观点
+- 前 3 秒就有钩子
+- 结尾必须完整，不截断
+- 优先反直觉观点、可执行方法论、情绪强记忆点
 
-**排除：**
-- 寒暄、赞助商口播、长篇铺垫
-- 依赖前文语境才能理解的片段
-- 思绪未完整表达就中断的片段
+## 安装与依赖
 
-## 🌐 翻译规则
+- Python 3.9+
+- `yt-dlp`
+- `ffmpeg`（或 `imageio-ffmpeg` 兜底）
 
-- 翻译为自然口语化的简体中文
-- 保留时间戳，仅在必要时微调
-- 准确保留人名、数字、产品名、引述
-- 宁可字幕稍多，不可过度压缩
-
-## 📄 License
+## License
 
 MIT

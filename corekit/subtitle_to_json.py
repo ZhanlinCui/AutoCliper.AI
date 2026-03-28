@@ -42,7 +42,7 @@ def parse_srt(text: str):
 
 def main() -> int:
     if len(sys.argv) != 3:
-        print("Usage: srt_to_json.py input.srt output.json", file=sys.stderr)
+        print("Usage: subtitle_to_json.py input.srt output.json", file=sys.stderr)
         return 1
     src = Path(sys.argv[1])
     dst = Path(sys.argv[2])

@@ -4,14 +4,14 @@ import sys
 from pathlib import Path
 
 try:
-    from scripts._ffmpeg import ffmpeg_exe
+    from corekit.ffmpeg_locator import ffmpeg_exe
 except ModuleNotFoundError:
-    from _ffmpeg import ffmpeg_exe
+    from ffmpeg_locator import ffmpeg_exe
 
 
 def main() -> int:
     if len(sys.argv) != 5:
-        print("Usage: clip_video.py input.mp4 start_sec end_sec output.mp4", file=sys.stderr)
+        print("Usage: cut_video.py input.mp4 start_sec end_sec output.mp4", file=sys.stderr)
         return 1
     src = Path(sys.argv[1])
     start = float(sys.argv[2])

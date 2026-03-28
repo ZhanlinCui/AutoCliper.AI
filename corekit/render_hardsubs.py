@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 import argparse
-import shlex
 import subprocess
 from pathlib import Path
 
 try:
-    from scripts._ffmpeg import ffmpeg_exe
+    from corekit.ffmpeg_locator import ffmpeg_exe
 except ModuleNotFoundError:
-    from _ffmpeg import ffmpeg_exe
+    from ffmpeg_locator import ffmpeg_exe
 
 
 def escape_filter_path(path: Path) -> str:

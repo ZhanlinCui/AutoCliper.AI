@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-import re
 import sys
 from pathlib import Path
 
 try:
-    from scripts.srt_to_json import parse_srt
+    from corekit.subtitle_to_json import parse_srt
 except ModuleNotFoundError:
-    from srt_to_json import parse_srt
+    from subtitle_to_json import parse_srt
 
 
 def fmt_time(seconds: float) -> str:
@@ -23,7 +22,7 @@ def fmt_time(seconds: float) -> str:
 
 def main() -> int:
     if len(sys.argv) != 5:
-        print("Usage: window_srt.py input.srt start_sec end_sec output.srt", file=sys.stderr)
+        print("Usage: window_subtitles.py input.srt start_sec end_sec output.srt", file=sys.stderr)
         return 1
     src = Path(sys.argv[1])
     start_sec = float(sys.argv[2])
