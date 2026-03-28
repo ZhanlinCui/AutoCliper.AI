@@ -13,7 +13,7 @@ Convert one long YouTube video into 5-15 short clips with Chinese packaging and 
 ## Prerequisites
 
 - `yt-dlp`
-- `ffmpeg` (or `imageio-ffmpeg` fallback)
+- `ffmpeg` (or `imageio-ffmpeg` fallback; libass is optional — the burn step auto-detects and uses a drawtext fallback)
 - Run with `PYTHONPATH="$PWD"` and `python3 -m corekit.<module>`
 
 ## Recommended Workspace Layout
@@ -48,7 +48,9 @@ PYTHONPATH="$PWD" python3 -m corekit.fetch_source "<YouTube_URL>" "studio/<slug>
 ### 2) Convert SRT to JSON
 
 ```bash
-PYTHONPATH="$PWD" python3 -m corekit.subtitle_to_json "studio/<slug>/intake/raw.en.srt" "studio/<slug>/intel/transcript.json"
+PYTHONPATH="$PWD" python3 -m corekit.subtitle_to_json \
+  "studio/<slug>/intake/raw.en.srt" \
+  "studio/<slug>/intel/transcript.json"
 ```
 
 ### 3) Analyze and Propose Candidates
@@ -68,29 +70,33 @@ Show a table:
 
 Ask user to choose IDs, unless user says to auto-pick.
 
-### 5) Batch Export (Enhanced)
+### 5) Export Each Chosen Clip
 
-Use the manifest exporter for parallel cut + subtitle window:
+For each clip in `selected_clips.json`:
+
+#### a) Cut the video segment
 
 ```bash
-PYTHONPATH="$PWD" python3 -m corekit.export_manifest \
+PYTHONPATH="$PWD" python3 -m corekit.cut_video \
   "studio/<slug>/intake/raw.mp4" \
-  "studio/<slug>/intake/raw.en.srt" \
-  "studio/<slug>/intel/selected_clips.json" \
-  "studio/<slug>/exports" \
-  --workers 6
+  <start_seconds> <end_seconds> \
+  "studio/<slug>/exports/01-<slug>/clip.mp4"
 ```
 
-This generates:
-- `clip.mp4`
-- `clip.src.srt`
-- `intel/export-report.json`
+#### b) Window the source subtitle
 
-### 6) Translate and Burn
+```bash
+PYTHONPATH="$PWD" python3 -m corekit.window_subtitles \
+  "studio/<slug>/intake/raw.en.srt" \
+  <start_seconds> <end_seconds> \
+  "studio/<slug>/exports/01-<slug>/clip.src.srt"
+```
 
-For each clip:
-1. Translate `clip.src.srt` -> `clip.zh.srt`
-2. Burn:
+#### c) Translate `clip.src.srt` → `clip.zh.srt`
+
+Translate the windowed English SRT into simplified Chinese SRT. Preserve timestamps; rewrite into natural spoken Chinese. See Translation Rules below.
+
+#### d) Burn subtitles and title
 
 ```bash
 PYTHONPATH="$PWD" python3 -m corekit.render_hardsubs \
@@ -100,7 +106,9 @@ PYTHONPATH="$PWD" python3 -m corekit.render_hardsubs \
   --title "你的标题"
 ```
 
-You can also rerun exporter with `--render-if-zh` to bulk render existing `clip.zh.srt`.
+IMPORTANT: Always pass the **Chinese** `.zh.srt` file, not the source `.src.srt`.
+
+The burn step auto-detects libass. If libass is unavailable, it renders each subtitle cue via drawtext — no manual workaround needed.
 
 ## Clip Selection Rules
 
@@ -111,28 +119,38 @@ You can also rerun exporter with `--render-if-zh` to bulk render existing `clip.
 - Prefer information density, strong claims, contrarian takes, emotional moments
 - Reject greetings, sponsor reads, filler, context-heavy setup
 
+Count guidance:
+- < 20 min video → 5-8 candidates
+- 20-60 min → 8-12 candidates
+- > 60 min → 10-15 candidates
+
+When in doubt, include more rather than fewer. The user will prune.
+
 ## Translation Rules
 
 - Spoken Simplified Chinese, natural rhythm
 - Keep names, numbers, products, and key claims accurate
 - Keep timestamps stable; only light cue rebalance
+- Prefer concise Chinese lines fitting short-form video pacing
+- If an English sentence spans multiple cues, rebalance text between neighbors while preserving order
+- Do not collapse cue-dense SRT into a tiny summary
+- Default: slightly too many cues, not far too few
 - If source is already Chinese, clean noise/duplication only
 
 ## Packaging Rules
 
 - Overlay title: <= 15 Chinese characters, sharp and faithful
 - Description: <= 140 Chinese characters, include speaker + source + key takeaway
-- Write per clip `metadata.txt` and full `packaging-copy.md`
+- Write per clip `metadata.txt` and full `intel/packaging-copy.md`
 
 ## Modules
 
-- `corekit.fetch_source` - download video/subtitles from YouTube
-- `corekit.subtitle_to_json` - parse SRT into JSON cues
-- `corekit.window_subtitles` - extract local subtitle windows
-- `corekit.cut_video` - cut MP4 segments
-- `corekit.render_hardsubs` - burn subtitles and first-second title
-- `corekit.export_manifest` - parallel batch export from selected_clips manifest
-- `corekit.ffmpeg_locator` - resolve ffmpeg executable
+- `corekit.fetch_source` — download video + subtitles from YouTube
+- `corekit.subtitle_to_json` — parse SRT into JSON cues
+- `corekit.window_subtitles` — extract local subtitle window for a time range
+- `corekit.cut_video` — cut MP4 segment by start/end seconds
+- `corekit.render_hardsubs` — burn Chinese subtitles and first-second title (auto libass/drawtext)
+- `corekit.ffmpeg_locator` — resolve ffmpeg executable
 
 ## Output Contract
 

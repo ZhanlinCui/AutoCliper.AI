@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
+"""Cut an exact time-range segment from a source video."""
 import subprocess
 import sys
 from pathlib import Path
 
 try:
-    from corekit.ffmpeg_locator import ffmpeg_exe
+    from corekit.ffmpeg_locator import ffmpeg_exe, h264_encoder, aac_encoder
 except ModuleNotFoundError:
-    from ffmpeg_locator import ffmpeg_exe
+    from ffmpeg_locator import ffmpeg_exe, h264_encoder, aac_encoder
 
 
 def main() -> int:
@@ -20,27 +21,27 @@ def main() -> int:
     duration = max(0.01, end - start)
 
     dst.parent.mkdir(parents=True, exist_ok=True)
+
+    enc = h264_encoder()
+    aac = aac_encoder()
     cmd = [
         ffmpeg_exe(),
         "-y",
-        "-ss",
-        str(start),
-        "-i",
-        str(src),
-        "-t",
-        str(duration),
-        "-c:v",
-        "libx264",
-        "-preset",
-        "medium",
-        "-crf",
-        "18",
-        "-c:a",
-        "aac",
-        "-movflags",
-        "+faststart",
+        "-ss", str(start),
+        "-i", str(src),
+        "-t", str(duration),
+        "-c:v", enc,
+        "-c:a", aac,
+        "-movflags", "+faststart",
         str(dst),
     ]
+    if enc == "libx264":
+        cmd.insert(-1, "-preset")
+        cmd.insert(-1, "medium")
+        cmd.insert(-1, "-crf")
+        cmd.insert(-1, "18")
+
+    print(f"[cut] encoder={enc}, {start:.1f}→{end:.1f}", file=sys.stderr)
     return subprocess.run(cmd).returncode
 
 
