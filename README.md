@@ -6,7 +6,7 @@
 
 <h3 align="center">
   One long video in. A dozen ready-to-post short clips out.<br>
-  一条长视频进，一打可发布短视频出。
+  长视频自动剪辑工具，自动标题，双语字幕切片。
 </h3>
 
 <h4 align="center">
